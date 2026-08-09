@@ -1,8 +1,14 @@
 <script lang="ts">
+	import Seo from '$lib/components/Seo.svelte';
 	import { catalog } from '$lib/catalog.svelte';
 </script>
 
-<svelte:head><title>Methodology — ffext</title></svelte:head>
+<Seo
+	title="Methodology — how ffext scores Firefox extensions"
+	description="What gets listed, why source availability is a separate tier, how the 0–100 trust score is computed from permissions, data collection, maintenance and adoption — and what the data cannot tell you."
+	path="/methodology"
+	type="article"
+/>
 
 <main class="mx-auto max-w-3xl px-4 py-10">
 	<h1 class="text-3xl font-bold tracking-tight">Methodology</h1>

@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ffext",
+  "account_id": "069ab22cae52469e743491dfe881bfae",
+  "compatibility_date": "2026-08-01",
+  "workers_dev": false,
+
+  // The worker exists only to serve the SPA shell for client-side routes;
+  // everything else is served straight from the asset layer ahead of it.
+  "main": "worker/index.ts",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "web/build",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none",
+  },
+
+  // ffext.iodev.org is attached by OpenTofu (terraform/cloudflare/workers.tf in
+  // the infra repo), matching how the other workers on this account are wired.
+
+  "observability": {
+    "enabled": true,
+  },
+}

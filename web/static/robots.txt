@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# The index and detail shards are what the pages render from — blocking them
+# would leave a rendering crawler with an empty document.
+Allow: /data/
+
+Sitemap: https://ffext.iodev.org/sitemap.xml

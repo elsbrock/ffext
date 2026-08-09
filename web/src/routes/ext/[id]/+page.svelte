@@ -3,6 +3,8 @@
 	import { base } from '$app/paths';
 	import Badge from '$lib/components/Badge.svelte';
 	import ScoreBadge from '$lib/components/ScoreBadge.svelte';
+	import Seo from '$lib/components/Seo.svelte';
+	import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from '$lib/seo';
 	import { catalog } from '$lib/catalog.svelte';
 	import type { ExtensionDetail } from '$lib/types';
 	import {
@@ -55,9 +57,64 @@
 		['maintenance', 'Maintenance'],
 		['adoption', 'Adoption & reputation']
 	] as const;
+
+	// Meta descriptions are truncated on a word boundary; a mid-word cut reads as
+	// broken to anyone seeing it in a search result.
+	function clamp(s: string, max = 155): string {
+		const t = s.replace(/\s+/g, ' ').trim();
+		if (t.length <= max) return t;
+		const cut = t.slice(0, max - 1);
+		return `${cut.slice(0, cut.lastIndexOf(' ')) || cut}…`;
+	}
+
+	const metaDescription = $derived(
+		ext
+			? clamp(
+					`${ext.summary || ext.name} — ${ext.license.name}, trust score ${ext.score}/100 on ffext.`
+				)
+			: SITE_DESCRIPTION
+	);
+
+	const schema = $derived(
+		ext
+			? {
+					'@context': 'https://schema.org',
+					'@type': 'SoftwareApplication',
+					name: ext.name,
+					description: ext.summary || undefined,
+					url: `${SITE_URL}/ext/${ext.id}`,
+					applicationCategory: 'BrowserApplication',
+					operatingSystem: 'Firefox',
+					softwareVersion: ext.version || undefined,
+					dateModified: ext.lastUpdated || undefined,
+					license: ext.license.url || undefined,
+					sameAs: [ext.amoUrl, ext.repo?.url, ext.homepage].filter(Boolean),
+					author: ext.authors.length
+						? ext.authors.map((a) => ({ '@type': 'Person', name: a.name }))
+						: undefined,
+					offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+					aggregateRating:
+						ext.ratings.count && ext.ratings.average
+							? {
+									'@type': 'AggregateRating',
+									ratingValue: ext.ratings.average,
+									ratingCount: ext.ratings.count,
+									bestRating: 5,
+									worstRating: 1
+								}
+							: undefined
+				}
+			: null
+	);
 </script>
 
-<svelte:head><title>{ext ? `${ext.name} — ffext` : 'ffext'}</title></svelte:head>
+<Seo
+	title={ext ? `${ext.name} — trust profile on ffext` : SITE_TITLE}
+	description={metaDescription}
+	path={`/ext/${page.params.id}`}
+	{schema}
+	noindex={notFound}
+/>
 
 <main class="mx-auto max-w-5xl px-4 py-8">
 	<a

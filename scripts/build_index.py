@@ -16,7 +16,12 @@ from datetime import datetime, timezone
 
 ROOT = os.path.join(os.path.dirname(__file__), "..")
 DB = os.path.join(ROOT, "data", "amo.sqlite")
-OUT = os.path.join(ROOT, "web", "static", "data")
+STATIC = os.path.join(ROOT, "web", "static")
+OUT = os.path.join(STATIC, "data")
+
+# Canonical origin, mirrored from web/src/lib/seo.ts — the sitemap needs
+# absolute URLs and is written here rather than by the SvelteKit build.
+SITE_URL = "https://ffext.iodev.org"
 
 # Reference date: the corpus snapshot. Recency is measured against the newest
 # last_updated in the data so the build is deterministic and not wall-clock bound.
@@ -146,6 +151,31 @@ def strip_html(s):
     s = (s.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
           .replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " "))
     return re.sub(r"[ \t]+", " ", s).strip()
+
+
+def write_sitemap(verified, details, snapshot):
+    """Emit a sitemap covering the static pages and the source-verified tier.
+
+    Only the verified tier is listed. The declared tier is four times larger and
+    is, by construction, the cohort we can say the least about — pointing
+    crawlers at 52k of those pages would spend the site's crawl budget on its
+    weakest content.
+    """
+    day = snapshot.date().isoformat()
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for path, changefreq, priority in (("/", "daily", "1.0"),
+                                       ("/methodology", "monthly", "0.7")):
+        lines.append(f"<url><loc>{SITE_URL}{path}</loc><lastmod>{day}</lastmod>"
+                     f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>")
+    for it in verified:
+        last = (details.get(it["id"], {}).get("lastUpdated") or "")[:10] or day
+        lines.append(f"<url><loc>{SITE_URL}/ext/{it['id']}</loc>"
+                     f"<lastmod>{last}</lastmod><changefreq>monthly</changefreq></url>")
+    lines.append("</urlset>")
+    with open(os.path.join(STATIC, "sitemap.xml"), "w") as f:
+        f.write("\n".join(lines))
+    return len(verified) + 2
 
 
 def find_repo(addon, license_url):
@@ -457,6 +487,8 @@ def main():
     with open(os.path.join(OUT, "meta.json"), "w") as f:
         json.dump(meta, f, indent=2)
 
+    urls = write_sitemap(verified, details, snapshot)
+
     print(f"listed {len(items)} OSS extensions "
           f"(verified {stats['tier_verified']}, declared {stats['tier_declared']})")
     print(f"excluded {stats['excluded_non_oss']} non-OSS, {stats['excluded_disabled']} disabled")
@@ -464,6 +496,7 @@ def main():
         mb = os.path.getsize(os.path.join(OUT, fname)) / 1e6
         print(f"{fname} = {mb:.1f} MB")
     print(f"{len(shards)} detail shards")
+    print(f"sitemap.xml = {urls} URLs")
 
 
 if __name__ == "__main__":

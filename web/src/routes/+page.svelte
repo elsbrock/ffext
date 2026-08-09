@@ -1,12 +1,54 @@
 <script lang="ts">
 	import ExtensionRow from '$lib/components/ExtensionRow.svelte';
 	import FilterPanel from '$lib/components/FilterPanel.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import { applyFilters, catalog, defaultFilters, type SortKey } from '$lib/catalog.svelte';
-	import { Loader2, Search, SlidersHorizontal, X } from 'lucide-svelte';
+	import { SITE_DESCRIPTION, SITE_URL } from '$lib/seo';
+	import { filtersToQuery, filtersFromParams } from '$lib/urlstate';
+	import { replaceState } from '$app/navigation';
+	import { page } from '$app/state';
+	import { Check, Link2, Loader2, Search, SlidersHorizontal, X } from 'lucide-svelte';
+	import { onMount } from 'svelte';
 
 	let filters = $state(defaultFilters());
 	let showFilters = $state(false);
 	let limit = $state(60);
+	let copied = $state(false);
+
+	// Restoring after mount rather than at init keeps the prerendered markup and
+	// the hydrated markup identical; the catalogue has not loaded yet either way,
+	// so there is nothing to re-filter.
+	//
+	// The write-back is armed a tick later still: onMount runs inside the
+	// hydration flush, and calling replaceState before the router has finished
+	// starting throws — which aborts the rest of the flush and leaves the filter
+	// controls showing defaults while the state behind them is already restored.
+	let restored = $state(false);
+	onMount(() => {
+		filters = filtersFromParams(page.url.searchParams);
+		if (filters.includeDeclared) catalog.loadDeclared();
+		const armed = setTimeout(() => (restored = true));
+		return () => clearTimeout(armed);
+	});
+
+	// Mirror the filter state into the address bar so the current view is a link.
+	// replaceState, not pushState: every keystroke would otherwise be a history
+	// entry and the back button would become useless.
+	$effect(() => {
+		const query = filtersToQuery(filters);
+		if (!restored) return;
+		if (query !== page.url.search) replaceState(`${page.url.pathname}${query}`, page.state);
+	});
+
+	async function copyLink() {
+		try {
+			await navigator.clipboard.writeText(page.url.href);
+			copied = true;
+			setTimeout(() => (copied = false), 1500);
+		} catch {
+			// Clipboard denied — the URL is already in the address bar to copy by hand.
+		}
+	}
 
 	const pool = $derived(
 		filters.includeDeclared ? [...catalog.verified, ...catalog.declared] : catalog.verified
@@ -39,7 +81,34 @@
 	);
 </script>
 
-<svelte:head><title>ffext — open source Firefox extensions you can verify</title></svelte:head>
+<Seo
+	path="/"
+	schema={{
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'WebSite',
+				'@id': `${SITE_URL}/#website`,
+				url: `${SITE_URL}/`,
+				name: 'ffext',
+				description: SITE_DESCRIPTION,
+				inLanguage: 'en'
+			},
+			{
+				'@type': 'Dataset',
+				'@id': `${SITE_URL}/#dataset`,
+				name: 'Trust signals for open source Firefox extensions',
+				description:
+					'License, source availability, permission footprint, data-collection disclosure and maintenance recency for every OSI/FSF-licensed extension on addons.mozilla.org.',
+				url: `${SITE_URL}/`,
+				isAccessibleForFree: true,
+				license: 'https://www.gnu.org/licenses/agpl-3.0.html',
+				creator: { '@type': 'Person', name: 'Simon Elsbrock' },
+				isBasedOn: 'https://addons.mozilla.org/'
+			}
+		]
+	}}
+/>
 
 <main class="mx-auto max-w-7xl px-4 py-8">
 	<section class="mb-8">
@@ -103,6 +172,18 @@
 					class="tnum rounded bg-[var(--accent)] px-1.5 text-xs text-[var(--accent-fg)]"
 					>{activeCount}</span
 				>
+			{/if}
+		</button>
+
+		<button
+			onclick={copyLink}
+			title="Copy a link to this exact search"
+			class="surface flex h-10 items-center gap-2 rounded-lg px-3 text-sm hover:bg-[var(--bg-sunken)]"
+		>
+			{#if copied}
+				<Check class="size-4 text-[var(--color-trust-high)]" /> Copied
+			{:else}
+				<Link2 class="size-4" /> Share
 			{/if}
 		</button>
 

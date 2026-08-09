@@ -31,7 +31,10 @@ them as equivalent.
 ```
 scripts/crawl_amo.py     AMO API  -> data/amo.sqlite         (resumable, category-sliced)
 scripts/build_index.py   sqlite   -> web/static/data/*.json   (filter, score, shard)
+                                  -> web/static/sitemap.xml
+scripts/make_og_image.py          -> web/static/og.png        (social card)
 web/                     SvelteKit 5 + Tailwind v4, adapter-static
+worker/                  Cloudflare Worker: SPA fallback in front of the assets
 docs/specs/              design docs — read these first
 ```
 
@@ -39,12 +42,34 @@ docs/specs/              design docs — read these first
 
 ```sh
 python3 scripts/crawl_amo.py      # ~3,000 requests, resumable, ~10 min
-python3 scripts/build_index.py    # writes the static index
+python3 scripts/build_index.py    # writes the static index and the sitemap
 
 cd web
 npm install
 npm run dev                       # or: npm run build && npx vite preview
 ```
+
+## Deploying
+
+```sh
+npm install
+npm run deploy                    # builds web/, then wrangler deploy
+```
+
+`ffext.iodev.org` is attached to the Worker declaratively, from a separate infra
+repository — not by `wrangler.jsonc`.
+
+## Sharing a view
+
+Search text, sort, tier, categories, license families, data-collection state,
+the permission and maintenance toggles and the minimum trust score all live in
+the query string, so any view is a link:
+
+```
+/?q=dark&lic=permissive&nobroad=1&min=80&sort=name
+```
+
+Only non-default values are written, so the unfiltered directory stays at `/`.
 
 ## How the crawl reaches the whole corpus
 
