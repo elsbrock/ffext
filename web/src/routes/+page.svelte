@@ -8,7 +8,8 @@
 	import { replaceState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { Check, Link2, Loader2, Search, SlidersHorizontal, X } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
+	import type { Snapshot } from './$types';
 
 	let filters = $state(defaultFilters());
 	let showFilters = $state(false);
@@ -24,12 +25,43 @@
 	// starting throws — which aborts the rest of the flush and leaves the filter
 	// controls showing defaults while the state behind them is already restored.
 	let restored = $state(false);
+	let mounted = false;
 	onMount(() => {
 		filters = filtersFromParams(page.url.searchParams);
 		if (filters.includeDeclared) catalog.loadDeclared();
+		mounted = true;
+		applyPendingScroll();
 		const armed = setTimeout(() => (restored = true));
 		return () => clearTimeout(armed);
 	});
+
+	// Coming back from a detail page, the URL alone is not enough to reproduce the
+	// view: how far down the "Show more" pagination had been taken is component
+	// state, and a list truncated back to 60 rows is shorter than the offset the
+	// browser wants to restore, so the offset gets clamped and you land near the
+	// top. The snapshot carries both the page size and the offset.
+	let pendingScroll: number | null = null;
+
+	export const snapshot: Snapshot<{ limit: number; y: number }> = {
+		capture: () => ({ limit, y: window.scrollY }),
+		restore: (v) => {
+			limit = v.limit;
+			pendingScroll = v.y;
+			applyPendingScroll();
+		}
+	};
+
+	// Restoring is a two-part handshake — SvelteKit calls `restore` and `onMount`
+	// in an order this component should not depend on, and the offset is only
+	// meaningful once both the page size and the URL's filters are applied.
+	// Whichever lands second does the scrolling: after `tick` for the rows to
+	// exist, then a frame later so SvelteKit's own restore does not overwrite it.
+	function applyPendingScroll() {
+		if (!mounted || pendingScroll === null) return;
+		const y = pendingScroll;
+		pendingScroll = null;
+		tick().then(() => requestAnimationFrame(() => window.scrollTo(0, y)));
+	}
 
 	// Mirror the filter state into the address bar so the current view is a link.
 	// replaceState, not pushState: every keystroke would otherwise be a history
@@ -56,9 +88,20 @@
 	const results = $derived(applyFilters(pool, filters));
 	const visible = $derived(results.slice(0, limit));
 
-	// Reset paging whenever the result set changes shape.
+	// Reset paging whenever the result set changes shape — but only for changes the
+	// user made. Restoring filters from the URL also mutates `filters`, and
+	// treating that as a change would throw away the page size the snapshot just
+	// restored. Every filter is representable in the query string, so comparing
+	// the serialised form is an exact test for "did the result set change".
+	let pagedQuery = '';
 	$effect(() => {
-		void filters;
+		const query = filtersToQuery(filters);
+		if (!restored) {
+			pagedQuery = query;
+			return;
+		}
+		if (query === pagedQuery) return;
+		pagedQuery = query;
 		limit = 60;
 	});
 
