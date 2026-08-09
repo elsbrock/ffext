@@ -106,7 +106,21 @@
 		limit = 60;
 	});
 
+	// Typing a query switches the ordering to relevance and clearing it switches
+	// back, because "best match" is the only ordering that makes sense while
+	// searching. Only the default is overridden — someone who explicitly picked
+	// "Recently updated" keeps it.
+	let hadQuery = false;
+	$effect(() => {
+		const has = filters.query.trim().length > 0;
+		if (has === hadQuery) return;
+		hadQuery = has;
+		if (has && filters.sort === 'score') filters.sort = 'relevance';
+		else if (!has && filters.sort === 'relevance') filters.sort = 'score';
+	});
+
 	const SORTS: { key: SortKey; label: string }[] = [
+		{ key: 'relevance', label: 'Relevance' },
 		{ key: 'score', label: 'Trust score' },
 		{ key: 'users', label: 'Users' },
 		{ key: 'updated', label: 'Recently updated' },

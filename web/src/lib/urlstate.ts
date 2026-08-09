@@ -9,7 +9,7 @@
  */
 import { defaultFilters, type Filters, type SortKey } from './catalog.svelte';
 
-const SORT_KEYS: SortKey[] = ['score', 'users', 'updated', 'rating', 'name'];
+const SORT_KEYS: SortKey[] = ['relevance', 'score', 'users', 'updated', 'rating', 'name'];
 
 const SET_PARAMS = {
 	cat: 'categories',
