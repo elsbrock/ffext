@@ -1,0 +1,9 @@
+node_modules/
+.svelte-kit/
+build/
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+web/static/data/
+.DS_Store
+*.log
