@@ -108,3 +108,16 @@ function normalizeLink(raw: string): string {
 		return raw.trim().replace(/\/+$/, '').toLowerCase();
 	}
 }
+
+/** Canonical path for an extension: the numeric id carries the identity, the
+ *  slug is there for humans and for search engines. Mirrored in
+ *  scripts/build_index.py so the sitemap emits exactly these URLs. */
+export function extPath(id: number, slug: string | null | undefined): string {
+	return slug ? `/ext/${id}-${slug}` : `/ext/${id}`;
+}
+
+/** The id half of an /ext/<id>-<slug> path. Bare /ext/<id> still resolves, so
+ *  every link shared before the slugs existed keeps working. */
+export function extIdFromParam(param: string): number {
+	return Number.parseInt(param, 10);
+}

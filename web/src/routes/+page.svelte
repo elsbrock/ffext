@@ -160,20 +160,18 @@
 			Find Firefox extensions you can actually check
 		</h1>
 		<p class="mt-3 max-w-2xl text-[var(--fg-muted)]">
-			A directory of Firefox add-ons from
+			Open source add-ons from
 			<a
 				href="https://addons.mozilla.org"
 				rel="noopener noreferrer"
 				target="_blank"
 				class="underline decoration-[var(--fg-subtle)] underline-offset-2 hover:text-[var(--fg)]"
 				>addons.mozilla.org</a
-			>, filtered down to the ones that are open source and ranked by evidence instead of
-			popularity: is the source public, how much access does it ask for, what does it admit to
-			collecting, and is anyone still maintaining it.
+			>, ranked by what you can verify — not by download counts.
 		</p>
 		<p class="mt-2 max-w-2xl text-sm text-[var(--fg-subtle)]">
-			An extension runs inside every page you visit. This tells you which ones you can verify
-			before installing — <a
+			An extension runs on every page you visit. Check its source, permissions and data collection
+			first — <a
 				href="{base}/methodology"
 				class="underline decoration-[var(--fg-subtle)] underline-offset-2 hover:text-[var(--fg)]"
 				>how the score works</a

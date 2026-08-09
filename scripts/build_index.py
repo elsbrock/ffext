@@ -11,6 +11,7 @@ import math
 import os
 import re
 import sqlite3
+import unicodedata
 from collections import Counter
 from datetime import datetime, timezone
 
@@ -153,6 +154,37 @@ def strip_html(s):
     return re.sub(r"[ \t]+", " ", s).strip()
 
 
+def url_slug(*candidates):
+    """An ASCII slug for the decorative half of /ext/<id>-<slug>.
+
+    AMO slugs are not URL-friendly across the whole corpus: ~2,950 of them carry
+    non-ASCII characters ("4pda-инспектор", "sg-fórum-tuning"), which survive in a
+    URL only as percent-encoded noise that no one can read or share. Accents are
+    folded to their base letter and anything left over is dropped.
+
+    The identity of the page lives in the numeric id, so an empty slug is a
+    perfectly valid outcome — /ext/12345 still resolves.
+    """
+    for raw in candidates:
+        if not raw:
+            continue
+        folded = unicodedata.normalize("NFKD", str(raw))
+        ascii_only = folded.encode("ascii", "ignore").decode("ascii").lower()
+        slug = re.sub(r"[^a-z0-9]+", "-", ascii_only).strip("-")
+        # Long enough to stay descriptive, short enough to survive being pasted
+        # into a chat client that truncates.
+        slug = slug[:60].rstrip("-")
+        if slug:
+            return slug
+    return ""
+
+
+def ext_path(item):
+    """Canonical path for an extension. Mirrored in web/src/lib/utils.ts."""
+    slug = item.get("s") or ""
+    return f"/ext/{item['id']}-{slug}" if slug else f"/ext/{item['id']}"
+
+
 def write_sitemap(verified, details, snapshot):
     """Emit a sitemap covering the static pages and the source-verified tier.
 
@@ -170,7 +202,7 @@ def write_sitemap(verified, details, snapshot):
                      f"<changefreq>{changefreq}</changefreq><priority>{priority}</priority></url>")
     for it in verified:
         last = (details.get(it["id"], {}).get("lastUpdated") or "")[:10] or day
-        lines.append(f"<url><loc>{SITE_URL}/ext/{it['id']}</loc>"
+        lines.append(f"<url><loc>{SITE_URL}{ext_path(it)}</loc>"
                      f"<lastmod>{last}</lastmod><changefreq>monthly</changefreq></url>")
     lines.append("</urlset>")
     with open(os.path.join(STATIC, "sitemap.xml"), "w") as f:
@@ -392,7 +424,8 @@ def main():
         # Compact record for the client-side search index.
         items.append({
             "id": a["id"],
-            "s": a.get("slug"),
+            # The AMO slug where it survives ASCII folding, the name otherwise.
+            "s": url_slug(a.get("slug"), name),
             "n": name,
             "d": summary[:110],
             "ic": compact_icon((a.get("icons") or {}).get("64") or a.get("icon_url"), a["id"]),
@@ -414,7 +447,7 @@ def main():
 
         details[a["id"]] = {
             "id": a["id"],
-            "slug": a.get("slug"),
+            "slug": url_slug(a.get("slug"), name),
             "name": name,
             "summary": summary,
             "description": strip_html(localized(a.get("description")) or ""),

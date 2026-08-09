@@ -3,7 +3,7 @@
 	import Badge from './Badge.svelte';
 	import ScoreBadge from './ScoreBadge.svelte';
 	import type { IndexItem } from '$lib/types';
-	import { formatAge, formatUsers, iconUrl, licenseFamilyLabel } from '$lib/utils';
+	import { extPath, formatAge, formatUsers, iconUrl, licenseFamilyLabel } from '$lib/utils';
 	import { GitBranch, Globe, ShieldCheck, ShieldAlert, Star, Users } from 'lucide-svelte';
 
 	let { item }: { item: IndexItem } = $props();
@@ -11,7 +11,7 @@
 </script>
 
 <a
-	href="{base}/ext/{item.id}"
+	href="{base}{extPath(item.id, item.s)}"
 	class="surface group grid grid-cols-[auto_1fr_auto] items-start gap-x-4 gap-y-2 rounded-[var(--radius-card)] p-4 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-sunken)]"
 >
 	<div

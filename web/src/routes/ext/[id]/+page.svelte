@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { replaceState } from '$app/navigation';
 	import { base } from '$app/paths';
 	import Badge from '$lib/components/Badge.svelte';
 	import ScoreBadge from '$lib/components/ScoreBadge.svelte';
@@ -14,6 +15,8 @@
 		dataCollectionLabel,
 		formatAge,
 		formatBytes,
+		extIdFromParam,
+		extPath,
 		licenseFamilyLabel,
 		sameLink,
 		scoreBand
@@ -33,7 +36,7 @@
 	let notFound = $state(false);
 
 	$effect(() => {
-		const id = Number(page.params.id);
+		const id = extIdFromParam(page.params.id ?? '');
 		loading = true;
 		notFound = false;
 		let cancelled = false;
@@ -76,6 +79,17 @@
 			: SITE_DESCRIPTION
 	);
 
+	// The slug is decoration on top of the id, so several paths resolve to this
+	// same page — /ext/123, an outdated slug, a truncated copy-paste. One of them
+	// is canonical, and both crawlers and the address bar should see that one.
+	const canonicalPath = $derived(ext ? extPath(ext.id, ext.slug) : `/ext/${page.params.id}`);
+
+	$effect(() => {
+		if (!ext) return;
+		if (page.url.pathname === `${base}${canonicalPath}`) return;
+		replaceState(`${base}${canonicalPath}${page.url.search}`, page.state);
+	});
+
 	const schema = $derived(
 		ext
 			? {
@@ -83,7 +97,7 @@
 					'@type': 'SoftwareApplication',
 					name: ext.name,
 					description: ext.summary || undefined,
-					url: `${SITE_URL}/ext/${ext.id}`,
+					url: `${SITE_URL}${extPath(ext.id, ext.slug)}`,
 					applicationCategory: 'BrowserApplication',
 					operatingSystem: 'Firefox',
 					softwareVersion: ext.version || undefined,
@@ -112,7 +126,7 @@
 <Seo
 	title={ext ? `${ext.name} — trust profile on ffext` : SITE_TITLE}
 	description={metaDescription}
-	path={`/ext/${page.params.id}`}
+	path={canonicalPath}
 	{schema}
 	noindex={notFound}
 />
