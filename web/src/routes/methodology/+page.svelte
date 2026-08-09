@@ -1,9 +1,9 @@
 <script lang="ts">
 	import Seo from '$lib/components/Seo.svelte';
 	import { catalog } from '$lib/catalog.svelte';
-	import { REPO_URL, CONTACT_EMAIL } from '$lib/seo';
+	import { REPO_URL } from '$lib/seo';
 	import GithubMark from '$lib/components/GithubMark.svelte';
-	import { Mail } from 'lucide-svelte';
+	import { MessagesSquare } from 'lucide-svelte';
 
 	const meta = $derived(catalog.meta);
 	const n = (v: number | undefined) => (v ?? 0).toLocaleString();
@@ -299,11 +299,12 @@
 					<GithubMark class="size-4" /> Open an issue
 				</a>
 				<a
-					href="mailto:{CONTACT_EMAIL}"
+					href="{REPO_URL}/discussions"
+					rel="noopener noreferrer"
+					target="_blank"
 					class="surface inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-[var(--bg-sunken)]"
 				>
-					<Mail class="size-4" />
-					{CONTACT_EMAIL}
+					<MessagesSquare class="size-4" /> Discussions
 				</a>
 			</div>
 			<p class="mt-4 text-sm text-[var(--fg-subtle)]">
