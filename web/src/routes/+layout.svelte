@@ -2,7 +2,9 @@
 	import '../app.css';
 	import { base } from '$app/paths';
 	import { catalog } from '$lib/catalog.svelte';
-	import { Moon, Shield, Sun } from 'lucide-svelte';
+	import { REPO_URL } from '$lib/seo';
+	import { Moon, Shield, Star, Sun } from 'lucide-svelte';
+	import GithubMark from '$lib/components/GithubMark.svelte';
 	import { onMount } from 'svelte';
 
 	let { children } = $props();
@@ -39,6 +41,18 @@
 				>
 					Methodology
 				</a>
+				<!-- A directory that asks readers to trust open source should make its own
+				     source one click away, so this sits in the nav rather than the footer. -->
+				<a
+					href="{REPO_URL}/stargazers"
+					rel="noopener noreferrer"
+					target="_blank"
+					class="surface flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-[var(--fg-muted)] hover:bg-[var(--bg-sunken)] hover:text-[var(--fg)]"
+				>
+					<GithubMark class="size-4" />
+					<span class="hidden sm:inline">Star</span>
+					<Star class="size-3.5" />
+				</a>
 				<button
 					onclick={toggleTheme}
 					aria-label="Toggle theme"
@@ -58,6 +72,16 @@
 				href="https://addons.mozilla.org"
 				class="underline hover:text-[var(--fg-muted)]">addons.mozilla.org</a
 			> public API. Not affiliated with Mozilla.
+		</p>
+		<p class="mt-1">
+			ffext is open source —
+			<a
+				href={REPO_URL}
+				rel="noopener noreferrer"
+				target="_blank"
+				class="underline hover:text-[var(--fg-muted)]">elsbrock/ffext</a
+			>
+			on GitHub, AGPL-3.0. The crawler, the scoring and this site are all in the repo.
 		</p>
 		{#if catalog.meta}
 			<p class="mt-1 tnum">

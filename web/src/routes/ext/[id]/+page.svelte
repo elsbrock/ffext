@@ -15,6 +15,7 @@
 		formatAge,
 		formatBytes,
 		licenseFamilyLabel,
+		sameLink,
 		scoreBand
 	} from '$lib/utils';
 	import {
@@ -196,7 +197,7 @@
 			>
 				Install from AMO <ExternalLink class="size-3" />
 			</a>
-			{#if ext.homepage}
+			{#if ext.homepage && !sameLink(ext.homepage, ext.repo?.url)}
 				<a
 					href={ext.homepage}
 					rel="noopener noreferrer"

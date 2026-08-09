@@ -45,8 +45,17 @@
 				<Users class="size-3" />{formatUsers(item.u)}
 			</span>
 			{#if item.rc > 0}
-				<span class="tnum inline-flex items-center gap-1">
+				<!-- The count is shown next to the average because the average alone is
+				     not comparable: most extensions here are rated by a handful of people. -->
+				<span
+					class="tnum inline-flex items-center gap-1"
+					title="{item.r.toFixed(1)} out of 5 from {item.rc.toLocaleString()} rating{item.rc ===
+					1
+						? ''
+						: 's'}"
+				>
 					<Star class="size-3" />{item.r.toFixed(1)}
+					<span class="text-[var(--fg-subtle)]">({formatUsers(item.rc)})</span>
 				</span>
 			{/if}
 			<span class="tnum">{formatAge(item.ag)}</span>

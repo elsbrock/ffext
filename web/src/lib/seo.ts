@@ -12,6 +12,10 @@ export const SITE_DESCRIPTION =
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 
+/** The directory's own source. A site that ranks extensions on whether their
+ *  code is public has to have public code. */
+export const REPO_URL = 'https://github.com/elsbrock/ffext';
+
 /** Absolute URL for a route path. */
 export function absolute(path: string): string {
 	if (!path || path === '/') return `${SITE_URL}/`;

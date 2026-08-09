@@ -3,6 +3,7 @@
 	import FilterPanel from '$lib/components/FilterPanel.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import { applyFilters, catalog, defaultFilters, type SortKey } from '$lib/catalog.svelte';
+	import { base } from '$app/paths';
 	import { SITE_DESCRIPTION, SITE_URL } from '$lib/seo';
 	import { filtersToQuery, filtersFromParams } from '$lib/urlstate';
 	import { replaceState } from '$app/navigation';
@@ -109,7 +110,7 @@
 		{ key: 'score', label: 'Trust score' },
 		{ key: 'users', label: 'Users' },
 		{ key: 'updated', label: 'Recently updated' },
-		{ key: 'rating', label: 'Rating' },
+		{ key: 'rating', label: 'Best rated' },
 		{ key: 'name', label: 'Name' }
 	];
 
@@ -156,11 +157,27 @@
 <main class="mx-auto max-w-7xl px-4 py-8">
 	<section class="mb-8">
 		<h1 class="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
-			Extensions you can actually check
+			Find Firefox extensions you can actually check
 		</h1>
 		<p class="mt-3 max-w-2xl text-[var(--fg-muted)]">
-			Every listing here is open source licensed. We rank by public source availability,
-			permission footprint, data-collection disclosure and maintenance — not popularity.
+			A directory of Firefox add-ons from
+			<a
+				href="https://addons.mozilla.org"
+				rel="noopener noreferrer"
+				target="_blank"
+				class="underline decoration-[var(--fg-subtle)] underline-offset-2 hover:text-[var(--fg)]"
+				>addons.mozilla.org</a
+			>, filtered down to the ones that are open source and ranked by evidence instead of
+			popularity: is the source public, how much access does it ask for, what does it admit to
+			collecting, and is anyone still maintaining it.
+		</p>
+		<p class="mt-2 max-w-2xl text-sm text-[var(--fg-subtle)]">
+			An extension runs inside every page you visit. This tells you which ones you can verify
+			before installing — <a
+				href="{base}/methodology"
+				class="underline decoration-[var(--fg-subtle)] underline-offset-2 hover:text-[var(--fg)]"
+				>how the score works</a
+			>.
 		</p>
 		{#if catalog.meta}
 			<div class="tnum mt-5 flex flex-wrap gap-x-8 gap-y-3 text-sm">

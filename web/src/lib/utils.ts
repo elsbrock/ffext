@@ -89,3 +89,22 @@ export function debounce<T extends (...args: never[]) => void>(fn: T, ms: number
 		t = setTimeout(() => fn(...args), ms);
 	};
 }
+
+/** Whether two links point at the same place, ignoring the cosmetic differences
+ *  authors leave in AMO metadata: scheme, a leading www, a trailing slash and
+ *  case in the host. Used to drop a "Homepage" button that is just the repo
+ *  again — two identical-looking links side by side read as a bug. */
+export function sameLink(a: string | null | undefined, b: string | null | undefined): boolean {
+	return !!a && !!b && normalizeLink(a) === normalizeLink(b);
+}
+
+function normalizeLink(raw: string): string {
+	try {
+		const u = new URL(raw);
+		const host = u.host.toLowerCase().replace(/^www\./, '');
+		const path = u.pathname.replace(/\/+$/, '');
+		return `${host}${path}${u.search}`;
+	} catch {
+		return raw.trim().replace(/\/+$/, '').toLowerCase();
+	}
+}

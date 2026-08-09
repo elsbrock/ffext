@@ -120,6 +120,49 @@ export const catalog = new Catalog();
 
 const MAINTAINED_DAYS = 730;
 
+/**
+ * How many ratings an extension needs before its own average outweighs the
+ * corpus average. Sorting on the raw average is close to useless here: the
+ * median rated extension in the corpus has two ratings, and 6,373 of them hold
+ * a perfect 5.0 off three ratings or fewer, so a raw sort returns a wall of
+ * noise and buries the things thousands of people actually rated.
+ *
+ * 20 is roughly the 90th percentile of rating counts — high enough that a
+ * handful of reviews cannot buy the top of the list, low enough that a
+ * genuinely well-liked niche extension still surfaces.
+ */
+const RATING_PRIOR_WEIGHT = 20;
+
+/** Corpus mean rating, computed once per pool. */
+const ratingPriors = new WeakMap<IndexItem[], number>();
+
+function ratingPrior(items: IndexItem[]): number {
+	const cached = ratingPriors.get(items);
+	if (cached !== undefined) return cached;
+	let sum = 0;
+	let n = 0;
+	for (const it of items) {
+		if (it.rc > 0 && it.r > 0) {
+			sum += it.r;
+			n += 1;
+		}
+	}
+	const prior = n ? sum / n : 0;
+	ratingPriors.set(items, prior);
+	return prior;
+}
+
+/**
+ * Rating average pulled toward the corpus mean in proportion to how little
+ * evidence backs it (a Bayesian/"true Bayesian estimate" shrink). An unrated
+ * extension scores 0 rather than the mean, so it sorts below everything that
+ * has any evidence at all instead of tying with thousands of other blanks.
+ */
+export function weightedRating(it: IndexItem, prior: number): number {
+	if (!it.rc || !it.r) return 0;
+	return (it.r * it.rc + prior * RATING_PRIOR_WEIGHT) / (it.rc + RATING_PRIOR_WEIGHT);
+}
+
 export function applyFilters(items: IndexItem[], f: Filters): IndexItem[] {
 	const q = f.query.trim().toLowerCase();
 	const terms = q ? q.split(/\s+/) : [];
@@ -156,16 +199,18 @@ export function applyFilters(items: IndexItem[], f: Filters): IndexItem[] {
 		}
 		out.push(it);
 	}
-	return sortItems(out, f.sort);
+	// The prior comes from the whole pool, not the filtered subset, so narrowing
+	// the filters cannot move an extension's rating relative to its peers.
+	return sortItems(out, f.sort, f.sort === 'rating' ? ratingPrior(items) : 0);
 }
 
-function sortItems(items: IndexItem[], key: SortKey): IndexItem[] {
+function sortItems(items: IndexItem[], key: SortKey, prior: number): IndexItem[] {
 	const cmp: Record<SortKey, (a: IndexItem, b: IndexItem) => number> = {
 		score: (a, b) => b.sc - a.sc || b.u - a.u,
 		users: (a, b) => b.u - a.u,
 		// Nulls (unknown update date) sort last rather than first.
 		updated: (a, b) => (a.ag ?? Infinity) - (b.ag ?? Infinity),
-		rating: (a, b) => b.r - a.r || b.rc - a.rc,
+		rating: (a, b) => weightedRating(b, prior) - weightedRating(a, prior) || b.rc - a.rc,
 		name: (a, b) => a.n.localeCompare(b.n)
 	};
 	return items.sort(cmp[key]);
