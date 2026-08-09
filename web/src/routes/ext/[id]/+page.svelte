@@ -203,6 +203,17 @@
 					<ExternalLink class="size-3 text-[var(--fg-subtle)]" />
 				</a>
 			{/if}
+			{#if ext.repo?.source === 'description'}
+				<!-- Found by scanning free text rather than in a metadata field, so it
+				     may well be a library or a fork parent. Saying so beats presenting
+				     a guess with the same confidence as a declared project home. -->
+				<span
+					class="inline-flex items-center gap-1.5 self-center text-xs text-[var(--fg-subtle)]"
+					title="This link was matched in the extension's description text, not in AMO's homepage or support fields. It may not be this extension's own repository."
+				>
+					<AlertTriangle class="size-3.5" /> repo link taken from the description
+				</span>
+			{/if}
 			<a
 				href={ext.amoUrl}
 				rel="noopener noreferrer"

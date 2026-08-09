@@ -56,9 +56,17 @@ OSI_LICENSES = {
 # carries far less signal than a deliberately chosen license.
 DEFAULT_LICENSE = "MPL-2.0"
 
+# Public forges recognised as a source repository. Named explicitly rather than
+# matched by pattern: "contains the word git" would sweep in mirrors, docs sites
+# and download pages. Self-hosted Gitea/cgit instances are missed as a result,
+# and that undercount is stated on the methodology page.
+FORGE_HOSTS = [
+    "github.com", "gitlab.com", "codeberg.org", "bitbucket.org",
+    "git.sr.ht", "framagit.org", "salsa.debian.org", "invent.kde.org",
+]
+
 FORGE_RE = re.compile(
-    r"https?://(?:www\.)?(github\.com|gitlab\.com|codeberg\.org|bitbucket\.org|"
-    r"git\.sr\.ht|framagit\.org|salsa\.debian\.org|invent\.kde\.org)/"
+    r"https?://(?:www\.)?(" + "|".join(h.replace(".", r"\.") for h in FORGE_HOSTS) + r")/"
     r"([A-Za-z0-9._~%-]+)/([A-Za-z0-9._~%-]+)",
     re.I,
 )
@@ -211,7 +219,15 @@ def write_sitemap(verified, details, snapshot):
 
 
 def find_repo(addon, license_url):
-    """Return (repo_url, host, owner, name) from metadata, else description text."""
+    """Return (repo_url, host, owner, name, source) or None.
+
+    `source` records which field the link came from, because the two are not
+    equally trustworthy. A forge URL in AMO's own homepage/support_url field was
+    put there by the author as the project's home. One scraped out of free-text
+    description could be anything the author happened to mention - the library
+    they used, a project they forked, someone else's issue tracker. The site
+    labels the second kind rather than pretending both are the same evidence.
+    """
     candidates = []
     for key in ("homepage", "support_url"):
         block = (addon.get(key) or {}).get("url") or {}
@@ -220,20 +236,22 @@ def find_repo(addon, license_url):
     if license_url:
         candidates.append(license_url)
 
-    for source in (candidates, None):
-        if source is None:
-            blob = " ".join([
-                txt(addon.get("description")), txt(addon.get("summary")),
-                txt(addon.get("developer_comments")),
-            ])
-            m = FORGE_RE.search(blob)
-            if m:
-                return _repo_tuple(m)
-            return None
-        for url in source:
-            m = FORGE_RE.search(url or "")
-            if m:
-                return _repo_tuple(m)
+    for url in candidates:
+        m = FORGE_RE.search(url or "")
+        if m:
+            found = _repo_tuple(m)
+            if found:
+                return (*found, "metadata")
+
+    blob = " ".join([
+        txt(addon.get("description")), txt(addon.get("summary")),
+        txt(addon.get("developer_comments")),
+    ])
+    m = FORGE_RE.search(blob)
+    if m:
+        found = _repo_tuple(m)
+        if found:
+            return (*found, "description")
     return None
 
 
@@ -417,6 +435,8 @@ def main():
         promoted = sorted({p.get("category") for p in (a.get("promoted") or []) if p.get("category")})
         tier = "verified" if repo else "declared"
         stats[f"tier_{tier}"] += 1
+        if repo:
+            stats[f"repo_{repo[4]}"] += 1
 
         name = localized(a.get("name")) or a.get("slug")
         summary = strip_html(localized(a.get("summary")) or "")
@@ -443,6 +463,7 @@ def main():
             "dc": dc["state"],
             "pr": promoted,
             "rh": repo[1] if repo else None,
+            "rs": repo[4] if repo else None,
         })
 
         details[a["id"]] = {
@@ -455,7 +476,8 @@ def main():
             "authors": [{"name": x.get("name"), "url": x.get("url")} for x in (a.get("authors") or [])],
             "license": {"slug": slug, "name": lic_name, "family": lic_family,
                         "url": lic.get("url"), "isAmoDefault": slug == DEFAULT_LICENSE},
-            "repo": {"url": repo[0], "host": repo[1], "owner": repo[2], "name": repo[3]} if repo else None,
+            "repo": {"url": repo[0], "host": repo[1], "owner": repo[2], "name": repo[3],
+                     "source": repo[4]} if repo else None,
             "tier": tier,
             "score": total,
             "components": comps,
@@ -513,6 +535,9 @@ def main():
         "listed": len(items),
         "tiers": {"verified": stats["tier_verified"], "declared": stats["tier_declared"]},
         "excludedNonOss": stats["excluded_non_oss"],
+        "repoSources": {"metadata": stats["repo_metadata"],
+                        "description": stats["repo_description"]},
+        "forgeHosts": FORGE_HOSTS,
         "licenses": dict(Counter(i["l"] for i in items).most_common()),
         "categories": dict(cats.most_common()),
         "shardCount": 256,

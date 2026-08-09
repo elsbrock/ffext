@@ -16,6 +16,10 @@ export const OG_IMAGE = `${SITE_URL}/og.png`;
  *  code is public has to have public code. */
 export const REPO_URL = 'https://github.com/elsbrock/ffext';
 
+/** For corrections that do not belong in a public issue. Plus-addressed so mail
+ *  about this site can be filtered from everything else. */
+export const CONTACT_EMAIL = 'simon+ffext@iodev.org';
+
 /** Absolute URL for a route path. */
 export function absolute(path: string): string {
 	if (!path || path === '/') return `${SITE_URL}/`;

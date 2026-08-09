@@ -20,9 +20,14 @@ export interface IndexItem {
 	dc: DataCollectionState;
 	pr: string[]; // Mozilla promoted categories
 	rh: string | null; // repo host
+	rs: RepoSource | null; // where the repo link was found
 }
 
 export type Tier = 'verified' | 'declared';
+
+/** Which AMO field the repository link came from. `description` means it was
+ *  scraped out of free text and is materially weaker evidence. */
+export type RepoSource = 'metadata' | 'description';
 export type LicenseFamily =
 	| 'permissive'
 	| 'public-domain'
@@ -52,7 +57,7 @@ export interface ExtensionDetail {
 		url: string | null;
 		isAmoDefault: boolean;
 	};
-	repo: { url: string; host: string; owner: string; name: string } | null;
+	repo: { url: string; host: string; owner: string; name: string; source: RepoSource } | null;
 	tier: Tier;
 	score: number;
 	components: Record<string, ScoreComponent>;
@@ -89,6 +94,8 @@ export interface Meta {
 	listed: number;
 	tiers: { verified: number; declared: number };
 	excludedNonOss: number;
+	repoSources: Record<RepoSource, number>;
+	forgeHosts: string[];
 	licenses: Record<string, number>;
 	categories: Record<string, number>;
 	shardCount: number;

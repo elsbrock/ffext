@@ -2,7 +2,7 @@
 	import '../app.css';
 	import { base } from '$app/paths';
 	import { catalog } from '$lib/catalog.svelte';
-	import { REPO_URL } from '$lib/seo';
+	import { CONTACT_EMAIL, REPO_URL } from '$lib/seo';
 	import { Moon, Shield, Star, Sun } from 'lucide-svelte';
 	import GithubMark from '$lib/components/GithubMark.svelte';
 	import { onMount } from 'svelte';
@@ -82,6 +82,19 @@
 				class="underline hover:text-[var(--fg-muted)]">elsbrock/ffext</a
 			>
 			on GitHub, AGPL-3.0. The crawler, the scoring and this site are all in the repo.
+		</p>
+		<p class="mt-1">
+			Something wrong with a listing?
+			<a
+				href="{REPO_URL}/issues/new"
+				rel="noopener noreferrer"
+				target="_blank"
+				class="underline hover:text-[var(--fg-muted)]">Open an issue</a
+			>
+			or mail
+			<a href="mailto:{CONTACT_EMAIL}" class="underline hover:text-[var(--fg-muted)]"
+				>{CONTACT_EMAIL}</a
+			>.
 		</p>
 		{#if catalog.meta}
 			<p class="mt-1 tnum">
