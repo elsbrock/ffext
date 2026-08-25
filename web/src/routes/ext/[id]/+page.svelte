@@ -27,6 +27,7 @@
 		ExternalLink,
 		GitBranch,
 		Globe,
+		Info,
 		Loader2,
 		ShieldCheck
 	} from 'lucide-svelte';
@@ -169,8 +170,13 @@
 					{:else}
 						<Badge variant="mid">License declared, no public source</Badge>
 					{/if}
-					<Badge variant="outline" title={licenseFamilyLabel[ext.license.family]}>
-						{ext.license.name}
+					<Badge
+						variant="outline"
+						title={ext.license.declaredAs
+							? `${licenseFamilyLabel[ext.license.family]} — declared on AMO as a custom license named "${ext.license.declaredAs}"`
+							: licenseFamilyLabel[ext.license.family]}
+					>
+						{ext.license.name}{#if ext.license.source === 'custom-name'}*{/if}
 					</Badge>
 					{#each ext.promoted as p (p)}
 						<Badge variant="accent">Mozilla {p}</Badge>
@@ -267,6 +273,25 @@
 					{/if}
 				{/each}
 			</div>
+			{#if ext.license.source === 'custom-name'}
+				<p class="mt-3 flex gap-2 rounded-lg border border-[var(--border)] p-3 text-sm">
+					<Info class="mt-0.5 size-4 shrink-0" />
+					<span>
+						This author did not pick a license from Mozilla's list — they supplied a custom
+						one named <strong class="text-[var(--fg)]">"{ext.license.declaredAs}"</strong>,
+						which we read as {ext.license.name}. The license text itself is free-form and we
+						do not parse it.
+						{#if ext.license.url}
+							<a
+								class="underline underline-offset-2 hover:text-[var(--accent)]"
+								href={ext.license.url}
+								rel="noopener nofollow"
+								target="_blank">Read it on AMO</a
+							>.
+						{/if}
+					</span>
+				</p>
+			{/if}
 			{#if ext.license.isAmoDefault && !ext.repo}
 				<p
 					class={cn(

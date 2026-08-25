@@ -32,6 +32,7 @@ them as equivalent.
 scripts/crawl_amo.py     AMO API  -> data/amo.sqlite         (resumable, category-sliced)
 scripts/build_index.py   sqlite   -> web/static/data/*.json   (filter, score, shard)
                                   -> web/static/sitemap.xml
+scripts/report_exclusions.py      -> what was left out, and why
 scripts/make_og_image.py          -> web/static/og.png        (social card)
 web/                     SvelteKit 5 + Tailwind v4, adapter-static
 worker/                  Cloudflare Worker: SPA fallback in front of the assets
@@ -41,12 +42,20 @@ docs/specs/              design docs — read these first
 ## Usage
 
 ```sh
-python3 scripts/crawl_amo.py      # ~3,000 requests, resumable, ~10 min
-python3 scripts/build_index.py    # writes the static index and the sitemap
+python3 scripts/crawl_amo.py         # ~3,000 requests, resumable, ~10 min
+python3 scripts/report_exclusions.py # review what the filters dropped
+python3 scripts/build_index.py       # writes the static index and the sitemap
 
 cd web
 npm install
-npm run dev                       # or: npm run build && npx vite preview
+npm run dev                          # or: npm run build && npx vite preview
+```
+
+`report_exclusions.py` also answers the most common question about a missing
+extension, live and without a crawl:
+
+```sh
+python3 scripts/report_exclusions.py tridactyl-vim
 ```
 
 ## Deploying
@@ -82,7 +91,12 @@ immutable, which keeps pagination stable mid-crawl.
 
 Repository links come from AMO metadata and description text; they are not fetched. "Source
 available" means *a public repo is claimed and discoverable* — not that the published code
-matches the shipped build. Nothing here is reproducible-build verified. See
+matches the shipped build. Nothing here is reproducible-build verified.
+
+Authors may also bypass AMO's license dropdown and type a license name themselves. Those are
+matched against a fixed list of OSS license names, exactly and in full, so an extension whose
+license is named only "Custom License" is absent even when its code is public — and the license
+*text* is never parsed. `scripts/report_exclusions.py` ranks what that leaves out, by users. See
 [the methodology page](web/src/routes/methodology/+page.svelte) and
 [docs/specs/001-trust-directory.md](docs/specs/001-trust-directory.md).
 

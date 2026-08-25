@@ -1,6 +1,7 @@
 node_modules/
 .svelte-kit/
 build/
+__pycache__/
 data/*.sqlite
 data/*.sqlite-wal
 data/*.sqlite-shm

@@ -50,11 +50,153 @@ OSI_LICENSES = {
     "AGPL-3.0-only": ("AGPL 3.0", "strong-copyleft"),
     "AGPL-3.0-or-later": ("AGPL 3.0+", "strong-copyleft"),
     "Artistic-2.0": ("Artistic 2.0", "permissive"),
+    # Reachable only through the custom-name table below: AMO's dropdown has no
+    # slug for these, so authors who use them have to type the name by hand.
+    "Zlib": ("zlib", "permissive"),
+    "MIT-0": ("MIT No Attribution", "permissive"),
+    "WTFPL": ("WTFPL", "public-domain"),
+    "OSL-3.0": ("OSL 3.0", "copyleft"),
+    "EUPL-1.2": ("EUPL 1.2", "copyleft"),
 }
 
 # MPL-2.0 is AMO's pre-selected default in the submission form, so on its own it
 # carries far less signal than a deliberately chosen license.
 DEFAULT_LICENSE = "MPL-2.0"
+
+# --- custom license names ----------------------------------------------------
+#
+# AMO lets an author bypass the license dropdown and supply a custom license,
+# which arrives as `is_custom: true`, `slug: null` and a free-text name. Roughly
+# one popular extension in nine takes that route, and most of them are genuinely
+# proprietary ("Norton License Agreement", "Honey Terms of Use") - but a minority
+# typed the name of an ordinary OSS license into the box. Tridactyl, to pick the
+# case that prompted this, ships Apache-2.0 under the name "Apache v2".
+#
+# Those are recovered by exact match against the table below, after normalising
+# case, accents and punctuation. Exact match, never substring: "ISC License +
+# CC-BY" is a combination, "Custom BSD 3 License" is not the BSD 3-clause text,
+# and "No License" is the opposite of "Unlicense". Anything the table does not
+# name stays excluded, which is why an unresolved name is a listing decision
+# deferred rather than a mistake - run scripts/report_exclusions.py to see the
+# names worth adding.
+#
+# A version is always required where the family has incompatible versions, so
+# bare "GNU Affero General Public License" does not match while
+# "GNU Affero General Public License v3.0" does.
+
+CUSTOM_LICENSE_NAMES = {
+    "MIT": ["mit", "mit license", "the mit license", "mit license mit", "expat license"],
+    "MIT-0": ["mit 0", "mit no attribution"],
+    "Apache-2.0": [
+        "apache 2.0", "apache 2", "apache v2", "apache v2.0", "apache2.0",
+        "apache license 2.0", "apache license v2.0", "apache license version 2.0",
+        "apache license version 2", "apache software license 2.0", "apache 2.0 license",
+    ],
+    "ISC": ["isc", "isc license"],
+    "BSD-2-Clause": [
+        "bsd 2 clause", "bsd 2 clause license", "2 clause bsd license",
+        "simplified bsd license", "freebsd license",
+    ],
+    "BSD-3-Clause": [
+        "bsd 3", "bsd 3 clause", "bsd 3 clause license", "the bsd 3 clause license",
+        "3 clause bsd license", "new bsd license", "modified bsd license",
+    ],
+    "Unlicense": ["unlicense", "the unlicense", "unlicence", "the unlicence"],
+    "CC0-1.0": [
+        "cc0", "cc0 1.0", "cc0 universal", "cc0 1.0 universal", "creative commons zero",
+        "cc0 1.0 universal cc0 1.0 public domain dedication",
+    ],
+    "MPL-1.1": [
+        "mpl 1.1", "mozilla public license 1.1", "mozilla public licence 1.1",
+        "mozilla public license version 1.1", "mozilla public licence version 1.1",
+    ],
+    "MPL-2.0": [
+        "mpl 2.0", "mpl2.0", "mozilla public license 2.0", "mozilla public licence 2.0",
+        "mozilla public license v2.0", "mozilla public license version 2.0",
+        "mozilla public licence version 2.0",
+    ],
+    "LGPL-2.1-only": ["lgpl 2.1", "lgplv2.1", "gnu lesser general public license v2.1"],
+    "LGPL-3.0-only": ["lgpl 3.0", "lgplv3", "gnu lesser general public license v3.0"],
+    "LGPL-3.0-or-later": ["lgpl 3.0 or later", "lgplv3+"],
+    "GPL-2.0-only": [
+        "gpl 2.0", "gpl v2", "gplv2", "gnu gpl v2",
+        "gnu general public license v2.0", "gnu general public license version 2",
+    ],
+    "GPL-2.0-or-later": [
+        "gpl 2.0 or later", "gplv2+", "gpl v2+", "gnu general public license v2.0 or later",
+    ],
+    "GPL-3.0-only": [
+        "gpl 3.0", "gpl v3", "gplv3", "gnu gpl v3",
+        "gnu general public license v3.0", "gnu general public license version 3",
+    ],
+    "GPL-3.0-or-later": [
+        "gpl 3.0 or later", "gplv3+", "gpl v3+",
+        "gnu general public license v3.0 or later", "gnu general public license v3 or later",
+    ],
+    "AGPL-3.0-only": [
+        "agpl 3.0", "agpl v3", "agpl v3.0", "agplv3", "gnu agpl v3", "gnu agpl v3.0",
+        "affero general public license v3.0", "gnu affero general public license v3.0",
+        "gnu affero general public license version 3.0",
+    ],
+    "AGPL-3.0-or-later": [
+        "agpl 3.0 or later", "agplv3+", "gnu affero general public license v3.0 or later",
+        "gnu affero general public license v3.0 or any later version",
+    ],
+    "Artistic-2.0": ["artistic 2.0", "artistic license 2.0"],
+    "Zlib": ["zlib", "zlib license", "zlib libpng", "zlib libpng license"],
+    "WTFPL": [
+        "wtfpl", "wtfpl 2.0", "wtfpl version 2",
+        "do what the fuck you want to public license",
+    ],
+    "OSL-3.0": ["osl 3.0", "open software license 3.0", "open software license osl 3.0"],
+    "EUPL-1.2": [
+        "eupl 1.2", "european union public license 1.2", "european union public licence 1.2",
+        "european union public license v 1.2", "european union public licence v 1.2",
+    ],
+}
+
+
+def normalize_license_name(name):
+    """Fold a free-text license name to the form the alias table is keyed on."""
+    s = unicodedata.normalize("NFKD", str(name or ""))
+    s = s.encode("ascii", "ignore").decode("ascii").lower()
+    s = re.sub(r"(?<!\d)\.(?!\d)", " ", s)  # "v. 1.2" -> "v 1.2"; "2.0" survives
+    s = re.sub(r"[^a-z0-9.+]+", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _build_alias_table():
+    table = {}
+    for spdx, names in CUSTOM_LICENSE_NAMES.items():
+        assert spdx in OSI_LICENSES, f"alias target not in OSI_LICENSES: {spdx}"
+        for name in names:
+            # Keys are written pre-normalised so the table stays greppable.
+            assert normalize_license_name(name) == name, f"unnormalised alias key: {name!r}"
+            assert name not in table, f"duplicate alias: {name!r} ({table.get(name)}/{spdx})"
+            table[name] = spdx
+    return table
+
+
+CUSTOM_LICENSE_ALIASES = _build_alias_table()
+
+
+def resolve_license(lic):
+    """Return (spdx_slug, source) or None.
+
+    `source` is "amo-field" when AMO's structured license field named the license
+    and "custom-name" when it was recovered from free text. Both are the author's
+    own claim; the second one was matched by us, and the site says so.
+    """
+    slug = lic.get("slug")
+    if slug in OSI_LICENSES:
+        return slug, "amo-field"
+    if slug:
+        return None  # a named non-OSS license, e.g. all-rights-reserved
+    matched = CUSTOM_LICENSE_ALIASES.get(normalize_license_name(localized(lic.get("name"))))
+    return (matched, "custom-name") if matched else None
+
+
+# --- repositories ------------------------------------------------------------
 
 # Public forges recognised as a source repository. Named explicitly rather than
 # matched by pattern: "contains the word git" would sweep in mirrors, docs sites
@@ -316,14 +458,14 @@ def days_since(iso, snapshot):
         return None
 
 
-def score(addon, repo, perms, dc, age_days, license_slug):
+def score(addon, repo, perms, dc, age_days, license_slug, license_source):
     """Itemised 0-100 trust score. Every component is surfaced in the UI."""
     c = {}
 
     # Source availability (30) — the strongest signal.
     if repo:
         c["source"] = {"points": 30, "max": 30, "label": "Public source repository linked"}
-    elif license_slug == DEFAULT_LICENSE:
+    elif license_slug == DEFAULT_LICENSE and license_source == "amo-field":
         c["source"] = {"points": 0, "max": 30,
                        "label": "No public source; license is AMO's default (MPL-2.0)"}
     else:
@@ -416,13 +558,17 @@ def main():
     for a in parsed:
         cv = a.get("current_version") or {}
         lic = cv.get("license") or {}
-        slug = lic.get("slug")
-        if slug not in OSI_LICENSES:
+        resolved = resolve_license(lic)
+        if not resolved:
             stats["excluded_non_oss"] += 1
+            if not lic.get("slug"):
+                stats["excluded_custom_unmatched"] += 1
             continue
+        slug, lic_source = resolved
         if a.get("is_disabled"):
             stats["excluded_disabled"] += 1
             continue
+        stats[f"license_source_{lic_source}"] += 1
 
         lic_name, lic_family = OSI_LICENSES[slug]
         repo = find_repo(a, lic.get("url"))
@@ -430,7 +576,7 @@ def main():
         perms = classify_permissions(fileb)
         dc = data_collection(fileb)
         age = days_since(a.get("last_updated"), snapshot)
-        total, comps = score(a, repo, perms, dc, age, slug)
+        total, comps = score(a, repo, perms, dc, age, slug, lic_source)
 
         promoted = sorted({p.get("category") for p in (a.get("promoted") or []) if p.get("category")})
         tier = "verified" if repo else "declared"
@@ -475,7 +621,11 @@ def main():
             "icon": (a.get("icons") or {}).get("128") or a.get("icon_url"),
             "authors": [{"name": x.get("name"), "url": x.get("url")} for x in (a.get("authors") or [])],
             "license": {"slug": slug, "name": lic_name, "family": lic_family,
-                        "url": lic.get("url"), "isAmoDefault": slug == DEFAULT_LICENSE},
+                        "url": lic.get("url"), "source": lic_source,
+                        "declaredAs": localized(lic.get("name")) if lic_source == "custom-name" else None,
+                        # Only the dropdown value can be the form's pre-selection;
+                        # an author who typed "MPL 2.0" by hand chose it.
+                        "isAmoDefault": slug == DEFAULT_LICENSE and lic_source == "amo-field"},
             "repo": {"url": repo[0], "host": repo[1], "owner": repo[2], "name": repo[3],
                      "source": repo[4]} if repo else None,
             "tier": tier,
@@ -535,6 +685,9 @@ def main():
         "listed": len(items),
         "tiers": {"verified": stats["tier_verified"], "declared": stats["tier_declared"]},
         "excludedNonOss": stats["excluded_non_oss"],
+        "excludedCustomUnmatched": stats["excluded_custom_unmatched"],
+        "licenseSources": {"amoField": stats["license_source_amo-field"],
+                           "customName": stats["license_source_custom-name"]},
         "repoSources": {"metadata": stats["repo_metadata"],
                         "description": stats["repo_description"]},
         "forgeHosts": FORGE_HOSTS,
@@ -549,7 +702,11 @@ def main():
 
     print(f"listed {len(items)} OSS extensions "
           f"(verified {stats['tier_verified']}, declared {stats['tier_declared']})")
-    print(f"excluded {stats['excluded_non_oss']} non-OSS, {stats['excluded_disabled']} disabled")
+    print(f"license from AMO field {stats['license_source_amo-field']}, "
+          f"recovered from custom name {stats['license_source_custom-name']}")
+    print(f"excluded {stats['excluded_non_oss']} non-OSS "
+          f"({stats['excluded_custom_unmatched']} unmatched custom names), "
+          f"{stats['excluded_disabled']} disabled")
     for fname in ("index-verified.json", "index-declared.json"):
         mb = os.path.getsize(os.path.join(OUT, fname)) / 1e6
         print(f"{fname} = {mb:.1f} MB")

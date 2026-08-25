@@ -151,6 +151,15 @@ the addon id, which removed ~1.7 MB from the index alone.
   reproducible-build verified. This is stated in the UI.
 - 74 extensions (0.08%) were not captured, most likely uncategorised or churn
   during the crawl window.
-- Custom-licensed extensions (~2,900) are excluded even when the custom text is a
-  recognisable OSS license, because the license field is free text and cannot be
-  reliably classified.
+- Custom-licensed extensions are listed only when the free-text license *name*
+  matches, exactly, one entry in `CUSTOM_LICENSE_NAMES` (scripts/build_index.py).
+  That recovers cases like Tridactyl, which ships Apache-2.0 under the name
+  "Apache v2", without guessing at names that identify nothing — an extension
+  whose license is named "Custom License" stays out even when its code is public.
+  The residue is ranked by daily users by `scripts/report_exclusions.py`, which is
+  the intended way to find the next alias worth adding.
+- A matched name is recorded as `license.source = "custom-name"` and surfaced in
+  the UI. It is not scored down: both routes are the author's own unverified
+  claim, and we match only names that admit one reading.
+- Neither route verifies the license *text*, which AMO stores as free-form HTML
+  and we never fetch.

@@ -102,13 +102,29 @@
 			<p>
 				Every Firefox extension on addons.mozilla.org whose declared license is OSI- or
 				FSF-approved. Extensions marked
-				<code class="font-mono text-sm">all-rights-reserved</code> or carrying a free-text custom
-				license are excluded: a custom license field cannot be reliably classified, and guessing
-				would be worse than omitting.
+				<code class="font-mono text-sm">all-rights-reserved</code> are excluded.
+			</p>
+			<p class="mt-3">
+				Mozilla also lets an author skip the license dropdown and supply a custom license, which
+				arrives as free text. Most of those are genuinely proprietary — <em>Norton License
+					Agreement</em>, <em>Honey Terms of Use</em> — but a minority are ordinary OSS licenses
+				typed by hand: Tridactyl ships Apache-2.0 under the name <em>Apache v2</em>. Those are
+				recovered by matching the name, in full and exactly, against a fixed list of OSS license
+				names. Exact match, never substring — <em>ISC License + CC-BY</em> is a combination,
+				<em>No License</em> is the opposite of <em>Unlicense</em> — and a version is always
+				required where one exists. Every name the list does not carry stays excluded; we do not
+				guess, so an extension named merely <em>Custom License</em> is missing from this
+				directory even when its code is on GitHub.
+			</p>
+			<p class="mt-3">
+				A recovered license is marked as such on the extension's page, alongside the text the
+				author actually wrote. It is not scored differently: both routes are the author's own
+				claim about their own work, and neither is verified against the license text or the
+				shipped code.
 			</p>
 			{#if meta}
-				<div class="tnum mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-					{#each [['Crawled', meta.crawledTotal], ['Listed', meta.listed], ['Source available', meta.tiers.verified], ['Excluded, closed', meta.excludedNonOss]] as [label, value] (label)}
+				<div class="tnum mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+					{#each [['Crawled', meta.crawledTotal], ['Listed', meta.listed], ['Source available', meta.tiers.verified], ['Excluded, closed', meta.excludedNonOss], ['License read from a custom name', meta.licenseSources.customName], ['Custom names we could not read', meta.excludedCustomUnmatched]] as [label, value] (label)}
 						<div class="surface rounded-lg p-3">
 							<div class="text-xl font-semibold text-[var(--fg)]">{n(value as number)}</div>
 							<div class="text-xs text-[var(--fg-subtle)]">{label}</div>

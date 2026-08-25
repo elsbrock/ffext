@@ -28,6 +28,11 @@ export type Tier = 'verified' | 'declared';
 /** Which AMO field the repository link came from. `description` means it was
  *  scraped out of free text and is materially weaker evidence. */
 export type RepoSource = 'metadata' | 'description';
+
+/** How the license was identified. `custom-name` means the author bypassed AMO's
+ *  license dropdown and the name they typed was matched against a fixed table of
+ *  OSS license names — see CUSTOM_LICENSE_NAMES in scripts/build_index.py. */
+export type LicenseSource = 'amo-field' | 'custom-name';
 export type LicenseFamily =
 	| 'permissive'
 	| 'public-domain'
@@ -55,6 +60,9 @@ export interface ExtensionDetail {
 		name: string;
 		family: LicenseFamily;
 		url: string | null;
+		source: LicenseSource;
+		/** The author's own free text, when the license came from `custom-name`. */
+		declaredAs: string | null;
 		isAmoDefault: boolean;
 	};
 	repo: { url: string; host: string; owner: string; name: string; source: RepoSource } | null;
@@ -94,6 +102,9 @@ export interface Meta {
 	listed: number;
 	tiers: { verified: number; declared: number };
 	excludedNonOss: number;
+	/** Excluded because their custom license name matched nothing. */
+	excludedCustomUnmatched: number;
+	licenseSources: { amoField: number; customName: number };
 	repoSources: Record<RepoSource, number>;
 	forgeHosts: string[];
 	licenses: Record<string, number>;
