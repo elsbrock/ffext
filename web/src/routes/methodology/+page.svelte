@@ -136,6 +136,13 @@
 					catalogue is roughly 96,600. The crawler slices by category, each one individually under
 					that ceiling, and unions the results on addon id.
 				</p>
+				<p class="mt-3 text-sm">
+					The whole corpus is re-crawled weekly and republished in one piece — there is no
+					incremental update, so every number on the site comes from a single consistent
+					snapshot, taken on {meta.generated.slice(0, 10)}. A rebuild that loses more than a
+					tenth of the catalogue is rejected rather than published, on the assumption that the
+					crawl broke rather than that AMO shrank.
+				</p>
 			{/if}
 		</section>
 
@@ -291,8 +298,9 @@
 						This is a point-in-time crawl from {meta.generated.slice(0, 10)},
 					{:else}
 						This is a point-in-time crawl,
-					{/if} not a live feed. Anything published or updated since then is missing, and "last updated"
-					ages against the crawl date rather than today.
+					{/if} re-taken weekly, not a live feed. An extension published or updated since that date
+					is missing or out of date here for up to a week, and "last updated" ages against the crawl
+					date rather than today.
 				</li>
 			</ul>
 		</section>

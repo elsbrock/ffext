@@ -13,7 +13,22 @@
     "directory": "web/build",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "none",
+
+    // The crawled index lives in R2, not in the bundle. Routing these paths to
+    // the worker *ahead* of the asset layer means a build that happens to carry
+    // a local copy of web/static/data cannot shadow the R2 object and pin the
+    // site to a stale index. Keep in sync with isIndexPath() in worker/index.ts.
+    "run_worker_first": ["/data/*", "/sitemap.xml"],
   },
+
+  // Written weekly by .github/workflows/refresh-index.yml. The bucket itself is
+  // created by OpenTofu in the infra repo, like the route below.
+  "r2_buckets": [
+    {
+      "binding": "INDEX",
+      "bucket_name": "ffext-index",
+    },
+  ],
 
   // ffext.iodev.org is attached by OpenTofu (terraform/cloudflare/workers.tf in
   // the infra repo), matching how the other workers on this account are wired.

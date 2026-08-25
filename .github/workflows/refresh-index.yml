@@ -1,0 +1,136 @@
+# Rebuild the AMO corpus and publish it to R2.
+#
+# The site's index is not part of the asset bundle and not in git: this job is
+# the only thing that writes it. That is deliberate — deployment happens on push
+# to master, and data/ is gitignored, so if the index lived in the bundle every
+# code push would rebuild the site from a clean checkout with no corpus in it and
+# publish an empty directory. Keeping the two apart means a push only ever
+# changes code, and this job only ever changes data.
+#
+# Bootstrapping, in this order:
+#   1. create the R2 bucket named in wrangler.jsonc (infra repo)
+#   2. add the secrets below, then run this workflow manually
+#   3. only then deploy the worker that reads from it
+# Deploying the worker against an empty bucket falls back to the asset layer,
+# which in a CI build holds no index at all.
+#
+# Secrets: R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+#   An R2 API token scoped to Object Read & Write on the ffext-index bucket.
+#   These are the S3-compatible credentials, not a Cloudflare API token.
+
+name: refresh-index
+
+on:
+  schedule:
+    # Mondays 04:00 UTC. ~3,000 API requests against AMO per run; the corpus
+    # moves slowly enough that more often would be load without information.
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+    inputs:
+      max-drop:
+        description: 'Tolerated shrink vs. the live index, in percent'
+        required: false
+        default: '10'
+      publish:
+        description: 'Upload to R2 (uncheck for a dry run)'
+        type: boolean
+        required: false
+        default: true
+
+# A crawl takes ~10 minutes and the upload is not atomic; two of these writing
+# the same bucket would interleave shards from different snapshots.
+concurrency:
+  group: refresh-index
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Public — it is in wrangler.jsonc. Keep the two in sync.
+      R2_ACCOUNT_ID: 069ab22cae52469e743491dfe881bfae
+      R2_BUCKET: ffext-index
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Deliberately uncached. The crawler's resume state lives in the same
+      # SQLite file as the data: done_pages makes it skip any page it has already
+      # fetched, so restoring last week's database would skip the entire crawl
+      # and republish last week's corpus as if it were new.
+      - name: Crawl AMO
+        run: python3 scripts/crawl_amo.py
+
+      - name: Build the index
+        run: python3 scripts/build_index.py | tee build.log
+
+      - name: Verify before publishing
+        run: |
+          python3 scripts/verify_index.py \
+            --max-drop "${{ inputs.max-drop || '10' }}" | tee verify.log
+
+      - name: Summarise
+        if: always()
+        run: |
+          {
+            echo '## Index refresh'
+            echo '```'
+            cat build.log verify.log 2>/dev/null
+            echo '```'
+            echo '### Unresolved license names'
+            echo 'An OSS license name near the top of this list is an alias worth'
+            echo 'adding to CUSTOM_LICENSE_NAMES in scripts/build_index.py.'
+            echo '```'
+            python3 scripts/report_exclusions.py --limit 25 2>&1 | tail -45
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to R2
+        if: ${{ inputs.publish != false }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # R2 rejects the CRC checksums the AWS CLI started sending by default
+          # in 2.23; ask for them only where the protocol requires them.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          set -euo pipefail
+          if [ -z "${AWS_ACCESS_KEY_ID:-}" ]; then
+            echo "::error::R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY are not set"
+            exit 1
+          fi
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          # meta.json is the manifest every client reads first, so it goes last:
+          # until it names this build, the site keeps describing the previous one.
+          aws s3 sync web/static/data "s3://${R2_BUCKET}/data" \
+            --endpoint-url "$endpoint" \
+            --delete --exclude meta.json \
+            --content-type application/json \
+            --cache-control 'public, max-age=3600' \
+            --only-show-errors
+
+          aws s3 cp web/static/sitemap.xml "s3://${R2_BUCKET}/sitemap.xml" \
+            --endpoint-url "$endpoint" \
+            --content-type application/xml \
+            --cache-control 'public, max-age=3600' \
+            --only-show-errors
+
+          aws s3 cp web/static/data/meta.json "s3://${R2_BUCKET}/data/meta.json" \
+            --endpoint-url "$endpoint" \
+            --content-type application/json \
+            --cache-control 'public, max-age=3600' \
+            --only-show-errors
+
+          echo "published $(python3 -c 'import json;print(json.load(open("web/static/data/meta.json"))["listed"])') extensions" \
+            >> "$GITHUB_STEP_SUMMARY"

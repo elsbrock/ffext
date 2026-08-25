@@ -12,7 +12,8 @@ maintenance recency.
 `addons.mozilla.org` ranks by popularity and editorial promotion. Neither answers the question
 that matters before you grant a program the ability to read every page you visit.
 
-Crawling the full corpus surfaces the problem clearly:
+Crawling the full corpus surfaces the problem clearly (figures from the 2026-08-09 crawl;
+the site always shows the current ones):
 
 | | |
 |---|---|
@@ -33,6 +34,7 @@ scripts/crawl_amo.py     AMO API  -> data/amo.sqlite         (resumable, categor
 scripts/build_index.py   sqlite   -> web/static/data/*.json   (filter, score, shard)
                                   -> web/static/sitemap.xml
 scripts/report_exclusions.py      -> what was left out, and why
+scripts/verify_index.py           -> refuses to publish a broken or shrunken index
 scripts/make_og_image.py          -> web/static/og.png        (social card)
 web/                     SvelteKit 5 + Tailwind v4, adapter-static
 worker/                  Cloudflare Worker: SPA fallback in front of the assets
@@ -60,13 +62,31 @@ python3 scripts/report_exclusions.py tridactyl-vim
 
 ## Deploying
 
+Code and data are deployed by two separate paths, on purpose.
+
+**Code** ships on push to `master`, which builds `web/` and deploys the Worker.
+It carries no index: `data/` and `web/static/data/` are gitignored, so a build
+from a clean checkout has no corpus in it, and a push must not be able to
+publish an empty directory.
+
+**Data** is published by `.github/workflows/refresh-index.yml`, weekly and on
+demand. It crawls, builds, verifies, and writes the JSON shards and the sitemap
+to the R2 bucket bound as `INDEX`. `run_worker_first` in `wrangler.jsonc` routes
+`/data/*` and `/sitemap.xml` to the Worker ahead of the asset layer, so R2 is
+always what the site reads.
+
 ```sh
 npm install
 npm run deploy                    # builds web/, then wrangler deploy
 ```
 
-`ffext.iodev.org` is attached to the Worker declaratively, from a separate infra
-repository — not by `wrangler.jsonc`.
+`ffext.iodev.org` and the `ffext-index` bucket are attached declaratively from a
+separate infra repository — not by `wrangler.jsonc`.
+
+The refresh job needs `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as repository
+secrets: an R2 API token with Object Read & Write on that bucket. Populate the
+bucket before deploying a Worker that reads from it — an empty bucket falls back
+to the asset layer, which in a CI build holds no index at all.
 
 ## Sharing a view
 

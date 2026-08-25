@@ -97,3 +97,10 @@ Filtered views are for sharing, not for occupying the index.
 - [x] Static Open Graph card
 - [x] Filter state in the query string, with a Share button
 - [x] Worker + `wrangler.jsonc`; `ffext.iodev.org` attached from the infra repo
+
+## Superseded in part
+
+The index is no longer part of the asset bundle. Deployment on push to `master`
+made a build artifact out of something that is really an input on its own clock,
+and a code push could publish an empty directory. See
+[003](003-index-refresh.md).
